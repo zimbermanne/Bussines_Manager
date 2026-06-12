@@ -4,15 +4,19 @@ import { useAuth } from '../context/AuthContext';
 const NAV = [
   { section: 'Overview', links: [
     { to: '/', label: 'Dashboard', icon: '📊' },
+    { to: '/profit-loss', label: 'Profit & Loss', icon: '💰' },
   ]},
   { section: 'Finance', links: [
-    { to: '/sales', label: 'Sales', icon: '💰' },
-    { to: '/loans', label: 'Bank Loans', icon: '🏦' },
+    { to: '/sales', label: 'Sales', icon: '�' },
+    { to: '/purchases', label: 'Purchases', icon: '📦' },
+    { to: '/expenses', label: 'Expenses', icon: '💸' },
   ]},
   { section: 'Operations', links: [
+    { to: '/loans', label: 'Bank Loans', icon: '🏦' },
+    { to: '/vikoba', label: 'Vikoba', icon: '�' },
+    { to: '/tenders', label: 'Tenders', icon: '�' },
+    { to: '/suppliers', label: 'Suppliers', icon: '🚛' },
     { to: '/deadlines', label: 'Deadlines', icon: '📅' },
-    { to: '/tenders', label: 'Tenders', icon: '📦' },
-    { to: '/suppliers', label: 'Suppliers', icon: '🏭' },
   ]},
 ];
 
@@ -25,23 +29,28 @@ export default function Layout() {
     navigate('/login');
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'ZE';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
-    <div className="app-layout">
+    <div className="app-container">
       <aside className="sidebar">
-        <div className="sidebar-logo">
-          <h1>Company Manager</h1>
-          <p>Business Control</p>
+        <div className="sidebar-header">
+          <h2>Company Manager</h2>
+          <p>Business control panel</p>
         </div>
-        <nav className="sidebar-nav">
+        <nav className="sidebar-menu">
           {NAV.map((group) => (
-            <div key={group.section}>
-              <div className="nav-section">{group.section}</div>
+            <div key={group.section} className="menu-group">
+              <h3>{group.section}</h3>
               {group.links.map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}
                   end={link.to === '/'}
-                  className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+                  className={({ isActive }) => `menu-item${isActive ? ' active' : ''}`}
                 >
                   <span className="icon">{link.icon}</span>
                   {link.label}
@@ -51,8 +60,11 @@ export default function Layout() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <div>{user?.full_name}</div>
-          <button type="button" onClick={handleLogout}>Sign out</button>
+          <div className="user-profile">
+            <div className="avatar">{getInitials(user?.full_name)}</div>
+            <span className="username">{user?.full_name || 'User'}</span>
+          </div>
+          <button className="btn-signout" onClick={handleLogout}>Sign out</button>
         </div>
       </aside>
       <main className="main-content">

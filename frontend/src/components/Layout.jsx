@@ -1,10 +1,10 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const NAV = [
   { section: 'Overview', items: [
-    { to: '/', label: 'Dashboard', icon: '📊' },
+    { to: '/overview', label: 'Business Overview', icon: '📊' },
     { to: '/profit-loss', label: 'Profit & Loss', icon: '💰' },
   ]},
   { section: 'Finance', items: [
@@ -23,15 +23,27 @@ const NAV = [
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+  const isDashboard = pathname === '/';
+
+  if (isDashboard) {
+    return <Outlet />;
+  }
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className="nav-sidebar">
         <div className="sidebar-logo">
           <h1>Company Manager</h1>
           <p>Business control panel</p>
         </div>
         <nav className="sidebar-nav">
+          <div>
+            <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+              <span className="icon">⚡</span>
+              Agent Dashboard
+            </NavLink>
+          </div>
           {NAV.map((group) => (
             <div key={group.section}>
               <div className="nav-section">{group.section}</div>
@@ -39,7 +51,7 @@ export default function Layout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === '/'}
+                  end={item.to === '/overview'}
                   className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
                 >
                   <span className="icon">{item.icon}</span>

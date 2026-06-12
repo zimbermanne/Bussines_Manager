@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import BusinessOverview from './pages/BusinessOverview';
 import Sales from './pages/Sales';
 import Purchases from './pages/Purchases';
 import Expenses from './pages/Expenses';
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
+            <Route path="overview" element={<BusinessOverview />} />
             <Route path="sales" element={<Sales />} />
             <Route path="purchases" element={<Purchases />} />
             <Route path="expenses" element={<Expenses />} />

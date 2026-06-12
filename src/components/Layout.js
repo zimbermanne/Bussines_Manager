@@ -6,13 +6,13 @@ const NAV = [
     { to: '/', label: 'Dashboard', icon: '📊' },
   ]},
   { section: 'Finance', links: [
-    { to: '/sales', label: 'Sales', icon: '🛒' },
+    { to: '/sales', label: 'Sales', icon: '💰' },
     { to: '/loans', label: 'Bank Loans', icon: '🏦' },
   ]},
   { section: 'Operations', links: [
     { to: '/deadlines', label: 'Deadlines', icon: '📅' },
-    { to: '/tenders', label: 'Tenders', icon: '📋' },
-    { to: '/suppliers', label: 'Suppliers', icon: '🚛' },
+    { to: '/tenders', label: 'Tenders', icon: '📦' },
+    { to: '/suppliers', label: 'Suppliers', icon: '🏭' },
   ]},
 ];
 
@@ -26,8 +26,7 @@ export default function Layout() {
   };
 
   return (
-    // Changed "app-layout" to "app-shell" to link properly with index.css
-    <div className="app-shell"> 
+    <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-logo">
           <h1>Company Manager</h1>
@@ -52,7 +51,7 @@ export default function Layout() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <div style={{ fontWeight: '600', marginBottom: '4px' }}>{user?.full_name}</div>
+          <div>{user?.full_name}</div>
           <button type="button" onClick={handleLogout}>Sign out</button>
         </div>
       </aside>

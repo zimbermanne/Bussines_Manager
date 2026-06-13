@@ -15,6 +15,10 @@ from routes.auth         import router as auth_router
 from routes.bank_loans   import router as loans_router
 from routes.finance      import sales_router, purchases_router, expenses_router, pnl_router
 from routes.operations   import deadlines_router, suppliers_router, tenders_router
+from routes.inventory    import router as inventory_router
+from routes.contacts     import router as contacts_router, debtors_router, creditors_router
+from routes.data_io      import router as data_io_router
+from routes.activity     import router as activity_router
 
 # Import agents
 from agents.agents import (
@@ -47,7 +51,7 @@ def start_scheduler():
     scheduler.add_job(summary_agent, CronTrigger(hour=19, minute=0), id="summary_agent")
 
     scheduler.start()
-    print("All agents started")
+    print("✅ All agents started")
 
 
 # ─── App lifecycle ───────────────────────────────────────────
@@ -84,7 +88,6 @@ app.add_middleware(
 
 # ─── Register routes ─────────────────────────────────────────
 
-
 app.include_router(auth_router)
 app.include_router(loans_router)
 app.include_router(sales_router)
@@ -94,6 +97,12 @@ app.include_router(pnl_router)
 app.include_router(deadlines_router)
 app.include_router(suppliers_router)
 app.include_router(tenders_router)
+app.include_router(inventory_router)
+app.include_router(contacts_router)
+app.include_router(debtors_router)
+app.include_router(creditors_router)
+app.include_router(data_io_router)
+app.include_router(activity_router)
 
 
 # ─── Health check ────────────────────────────────────────────

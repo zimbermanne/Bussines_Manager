@@ -1,49 +1,50 @@
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const NAV = [
-  { section: 'Overview', items: [
+  { section: 'Overview', links: [
     { to: '/', label: 'Dashboard', icon: '📊' },
-    { to: '/profit-loss', label: 'Profit & Loss', icon: '💰' },
   ]},
-  { section: 'Finance', items: [
-    { to: '/sales', label: 'Sales', icon: '🛒' },
-    { to: '/purchases', label: 'Purchases', icon: '📦' },
-    { to: '/expenses', label: 'Expenses', icon: '💸' },
-  ]},
-  { section: 'Operations', items: [
+  { section: 'Finance', links: [
+    { to: '/sales', label: 'Sales', icon: '💰' },
     { to: '/loans', label: 'Bank Loans', icon: '🏦' },
-    { to: '/vikoba', label: 'Vikoba', icon: '👥' },
-    { to: '/tenders', label: 'Tenders', icon: '📋' },
-    { to: '/suppliers', label: 'Suppliers', icon: '🏭' },
+  ]},
+  { section: 'Operations', links: [
     { to: '/deadlines', label: 'Deadlines', icon: '📅' },
+    { to: '/tenders', label: 'Tenders', icon: '📦' },
+    { to: '/suppliers', label: 'Suppliers', icon: '🏭' },
   ]},
 ];
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
-    <div className="app-shell">
+    <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-logo">
           <h1>Company Manager</h1>
-          <p>Business control panel</p>
+          <p>Business Control</p>
         </div>
         <nav className="sidebar-nav">
           {NAV.map((group) => (
             <div key={group.section}>
               <div className="nav-section">{group.section}</div>
-              {group.items.map((item) => (
+              {group.links.map((link) => (
                 <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/'}
+                  key={link.to}
+                  to={link.to}
+                  end={link.to === '/'}
                   className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
                 >
-                  <span className="icon">{item.icon}</span>
-                  {item.label}
+                  <span className="icon">{link.icon}</span>
+                  {link.label}
                 </NavLink>
               ))}
             </div>
@@ -51,7 +52,7 @@ export default function Layout() {
         </nav>
         <div className="sidebar-footer">
           <div>{user?.full_name}</div>
-          <button type="button" onClick={logout}>Sign out</button>
+          <button type="button" onClick={handleLogout}>Sign out</button>
         </div>
       </aside>
       <main className="main-content">

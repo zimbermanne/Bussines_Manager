@@ -4,7 +4,6 @@ from sqlalchemy import (
     Column, String, Boolean, Integer, Numeric,
     Text, Date, DateTime, ForeignKey, JSON
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -18,7 +17,7 @@ def gen_uuid():
 class Company(Base):
     __tablename__ = "companies"
 
-    id              = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
+    id              = Column(String(36), primary_key=True, default=gen_uuid)
     name            = Column(String(255), nullable=False)
     tin             = Column(String(50))
     brela_number    = Column(String(100))
@@ -49,8 +48,8 @@ class Company(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id          = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id          = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     full_name           = Column(String(255), nullable=False)
     email               = Column(String(255), unique=True, nullable=False)
     password_hash       = Column(Text, nullable=False)
@@ -65,8 +64,8 @@ class User(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
-    id          = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id  = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id          = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id  = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     plan        = Column(String(50), default="trial")
     price_tzs   = Column(Integer, default=0)
     start_date  = Column(Date, default=date.today)
@@ -82,8 +81,8 @@ class Subscription(Base):
 class Deadline(Base):
     __tablename__ = "deadlines"
 
-    id              = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id      = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id              = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id      = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     name            = Column(String(255), nullable=False)
     category        = Column(String(100), nullable=False)
     interval_type   = Column(String(50), nullable=False)
@@ -102,8 +101,8 @@ class Deadline(Base):
 class BankLoan(Base):
     __tablename__ = "bank_loans"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id          = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id          = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     lender_name         = Column(String(255), nullable=False)
     principal_amount    = Column(Numeric(15, 2), nullable=False)
     interest_type       = Column(String(50), nullable=False)   # simple, reducing_balance
@@ -122,8 +121,8 @@ class BankLoan(Base):
 class BankLoanPayment(Base):
     __tablename__ = "bank_loan_payments"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    loan_id             = Column(UUID(as_uuid=False), ForeignKey("bank_loans.id", ondelete="CASCADE"), nullable=False)
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    loan_id             = Column(String(36), ForeignKey("bank_loans.id", ondelete="CASCADE"), nullable=False)
     payment_date        = Column(Date, nullable=False)
     amount_paid         = Column(Numeric(15, 2), nullable=False)
     interest_portion    = Column(Numeric(15, 2), nullable=False)
@@ -140,8 +139,8 @@ class BankLoanPayment(Base):
 class VikobaGroup(Base):
     __tablename__ = "vikoba_groups"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id          = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id          = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     name                = Column(String(255), nullable=False)
     lifespan_type       = Column(String(50), nullable=False)   # one_year, two_years, permanent
     start_date          = Column(Date, nullable=False)
@@ -165,8 +164,8 @@ class VikobaGroup(Base):
 class VikobaMember(Base):
     __tablename__ = "vikoba_members"
 
-    id          = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    group_id    = Column(UUID(as_uuid=False), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
+    id          = Column(String(36), primary_key=True, default=gen_uuid)
+    group_id    = Column(String(36), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
     full_name   = Column(String(255), nullable=False)
     phone       = Column(String(30))
     joined_date = Column(Date, default=date.today)
@@ -182,9 +181,9 @@ class VikobaMember(Base):
 class HisaPayment(Base):
     __tablename__ = "hisa_payments"
 
-    id          = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    group_id    = Column(UUID(as_uuid=False), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
-    member_id   = Column(UUID(as_uuid=False), ForeignKey("vikoba_members.id", ondelete="CASCADE"), nullable=False)
+    id          = Column(String(36), primary_key=True, default=gen_uuid)
+    group_id    = Column(String(36), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
+    member_id   = Column(String(36), ForeignKey("vikoba_members.id", ondelete="CASCADE"), nullable=False)
     due_date    = Column(Date, nullable=False)
     paid_date   = Column(Date)
     amount      = Column(Numeric(15, 2), nullable=False)
@@ -199,10 +198,10 @@ class HisaPayment(Base):
 class HisaPenalty(Base):
     __tablename__ = "hisa_penalties"
 
-    id              = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    group_id        = Column(UUID(as_uuid=False), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
-    member_id       = Column(UUID(as_uuid=False), ForeignKey("vikoba_members.id", ondelete="CASCADE"), nullable=False)
-    hisa_id         = Column(UUID(as_uuid=False), ForeignKey("hisa_payments.id", ondelete="CASCADE"), nullable=False)
+    id              = Column(String(36), primary_key=True, default=gen_uuid)
+    group_id        = Column(String(36), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
+    member_id       = Column(String(36), ForeignKey("vikoba_members.id", ondelete="CASCADE"), nullable=False)
+    hisa_id         = Column(String(36), ForeignKey("hisa_payments.id", ondelete="CASCADE"), nullable=False)
     penalty_date    = Column(Date, default=date.today)
     amount          = Column(Numeric(15, 2), nullable=False)
     status          = Column(String(50), default="unpaid")  # unpaid, paid
@@ -216,9 +215,9 @@ class HisaPenalty(Base):
 class VikobaLoan(Base):
     __tablename__ = "vikoba_loans"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    group_id            = Column(UUID(as_uuid=False), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
-    member_id           = Column(UUID(as_uuid=False), ForeignKey("vikoba_members.id", ondelete="CASCADE"), nullable=False)
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    group_id            = Column(String(36), ForeignKey("vikoba_groups.id", ondelete="CASCADE"), nullable=False)
+    member_id           = Column(String(36), ForeignKey("vikoba_members.id", ondelete="CASCADE"), nullable=False)
     loan_amount         = Column(Numeric(15, 2), nullable=False)
     interest_rate       = Column(Numeric(8, 4), nullable=False)
     issued_date         = Column(Date, nullable=False)
@@ -236,8 +235,8 @@ class VikobaLoan(Base):
 class VikobaLoanRepayment(Base):
     __tablename__ = "vikoba_loan_repayments"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    vikoba_loan_id      = Column(UUID(as_uuid=False), ForeignKey("vikoba_loans.id", ondelete="CASCADE"), nullable=False)
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    vikoba_loan_id      = Column(String(36), ForeignKey("vikoba_loans.id", ondelete="CASCADE"), nullable=False)
     payment_date        = Column(Date, nullable=False)
     amount_paid         = Column(Numeric(15, 2), nullable=False)
     interest_portion    = Column(Numeric(15, 2), nullable=False)
@@ -253,8 +252,8 @@ class VikobaLoanRepayment(Base):
 class BusinessUnit(Base):
     __tablename__ = "business_units"
 
-    id          = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id  = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id          = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id  = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     name        = Column(String(255), nullable=False)
     type        = Column(String(100))
     is_active   = Column(Boolean, default=True)
@@ -269,9 +268,9 @@ class BusinessUnit(Base):
 class SaleEntry(Base):
     __tablename__ = "sales_entries"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id          = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
-    business_unit_id    = Column(UUID(as_uuid=False), ForeignKey("business_units.id"))
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id          = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    business_unit_id    = Column(String(36), ForeignKey("business_units.id"))
     sale_date           = Column(Date, default=date.today, nullable=False)
     item_name           = Column(String(255), nullable=False)
     quantity            = Column(Numeric(10, 2), nullable=False)
@@ -287,10 +286,10 @@ class SaleEntry(Base):
 class Purchase(Base):
     __tablename__ = "purchases"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id          = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
-    business_unit_id    = Column(UUID(as_uuid=False), ForeignKey("business_units.id"))
-    supplier_id         = Column(UUID(as_uuid=False), ForeignKey("suppliers.id", ondelete="SET NULL"))
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id          = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    business_unit_id    = Column(String(36), ForeignKey("business_units.id"))
+    supplier_id         = Column(String(36), ForeignKey("suppliers.id", ondelete="SET NULL"))
     purchase_date       = Column(Date, default=date.today, nullable=False)
     item_name           = Column(String(255), nullable=False)
     quantity            = Column(Numeric(10, 2), nullable=False)
@@ -307,9 +306,9 @@ class Purchase(Base):
 class Expense(Base):
     __tablename__ = "expenses"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id          = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
-    business_unit_id    = Column(UUID(as_uuid=False), ForeignKey("business_units.id"))
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id          = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    business_unit_id    = Column(String(36), ForeignKey("business_units.id"))
     expense_date        = Column(Date, default=date.today, nullable=False)
     category            = Column(String(100), nullable=False)
     description         = Column(Text)
@@ -325,8 +324,8 @@ class Expense(Base):
 class Supplier(Base):
     __tablename__ = "suppliers"
 
-    id              = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id      = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id              = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id      = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     name            = Column(String(255), nullable=False)
     contact_phone   = Column(String(30))
     contact_email   = Column(String(255))
@@ -345,8 +344,8 @@ class Supplier(Base):
 class Tender(Base):
     __tablename__ = "tenders"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id          = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id          = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     name                = Column(String(255), nullable=False)
     reference_number    = Column(String(255))
     client              = Column(String(255))
@@ -365,9 +364,9 @@ class Tender(Base):
 class ProcurementItem(Base):
     __tablename__ = "procurement_items"
 
-    id                  = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    tender_id           = Column(UUID(as_uuid=False), ForeignKey("tenders.id", ondelete="CASCADE"), nullable=False)
-    supplier_id         = Column(UUID(as_uuid=False), ForeignKey("suppliers.id", ondelete="SET NULL"))
+    id                  = Column(String(36), primary_key=True, default=gen_uuid)
+    tender_id           = Column(String(36), ForeignKey("tenders.id", ondelete="CASCADE"), nullable=False)
+    supplier_id         = Column(String(36), ForeignKey("suppliers.id", ondelete="SET NULL"))
     item_name           = Column(String(255), nullable=False)
     quantity_needed     = Column(Numeric(10, 2), nullable=False)
     unit                = Column(String(50))
@@ -388,9 +387,9 @@ class ProcurementItem(Base):
 class NotificationLog(Base):
     __tablename__ = "notifications_log"
 
-    id              = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    company_id      = Column(UUID(as_uuid=False), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
-    user_id         = Column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"))
+    id              = Column(String(36), primary_key=True, default=gen_uuid)
+    company_id      = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    user_id         = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"))
     type            = Column(String(100), nullable=False)
     title           = Column(String(255), nullable=False)
     message         = Column(Text, nullable=False)

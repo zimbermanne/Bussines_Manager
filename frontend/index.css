@@ -332,8 +332,8 @@ tbody td {
   display: grid;
   gap: 14px;
 }
-.form-grid-2 { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
-.form-grid-3 { display: grid; gap: 14px; grid-template-columns: 1fr 1fr 1fr; }
+.form-grid-2 { grid-template-columns: 1fr 1fr; }
+.form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
 
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 
@@ -508,26 +508,3 @@ textarea { resize: vertical; min-height: 80px; }
   .stats-grid-3 { grid-template-columns: repeat(2, 1fr); }
   .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
 }
-
-/* ── Auth pages ── */
-.auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: var(--bg);
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 520px;
-}
-
-.auth-card form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }

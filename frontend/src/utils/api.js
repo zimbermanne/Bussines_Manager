@@ -23,10 +23,7 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Request failed' }));
-    const message = Array.isArray(err.detail)
-      ? err.detail.map((e) => e.msg || e).join(', ')
-      : err.detail || 'Request failed';
-    throw new Error(message);
+    throw new Error(err.detail || 'Request failed');
   }
 
   if (res.status === 204) return null;
@@ -39,6 +36,7 @@ export const api = {
   put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: (path) => request(path, { method: 'DELETE' }),
 
+  // Auth uses form encoding for OAuth2
   login: async (email, password) => {
     const form = new URLSearchParams({ username: email, password });
     const res = await fetch(`${BASE_URL}/auth/login`, {

@@ -21,6 +21,11 @@ CREATE TABLE companies (
     email           VARCHAR(255),
     region          VARCHAR(100),                       -- e.g. Kilimanjaro
     district        VARCHAR(100),                       -- e.g. Moshi
+    profile_type    VARCHAR(50) DEFAULT 'company',     -- solo, company
+    bank_name       VARCHAR(255),                       -- For payments
+    bank_account_number VARCHAR(50),                    -- For payments
+    logo_url        TEXT,                               -- Company logo for PDFs
+    base_currency   VARCHAR(3) DEFAULT 'TZS',           -- TZS, USD, KES, EUR, GBP
     created_at      TIMESTAMP DEFAULT NOW(),
     updated_at      TIMESTAMP DEFAULT NOW()
 );
@@ -35,6 +40,15 @@ CREATE TABLE users (
     push_subscription   JSONB,                         -- Web Push subscription object
     is_active           BOOLEAN DEFAULT TRUE,
     created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE user_businesses (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    is_primary          BOOLEAN DEFAULT FALSE,
+    created_at          TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, company_id)
 );
 
 CREATE TABLE subscriptions (
@@ -300,6 +314,376 @@ CREATE TABLE notifications_log (
     reference_table VARCHAR(100),                       -- which table the reference_id points to
     status          VARCHAR(50) DEFAULT 'sent',         -- sent, failed, read
     sent_at         TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 9: BUSINESS DOCUMENTS EXCHANGE
+-- ============================================================
+
+CREATE TABLE business_documents (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    sender_company_id   UUID NOT NULL REFERENCES companies(id),
+    receiver_company_id UUID NOT NULL REFERENCES companies(id),
+    document_type       VARCHAR(10) NOT NULL,           -- QUO, PRO, INV, RCP, CRN, DBN, DLN
+    document_number     VARCHAR(50) NOT NULL,
+    issue_date          DATE NOT NULL DEFAULT CURRENT_DATE,
+    due_date            DATE,
+    status              VARCHAR(20) DEFAULT 'draft',     -- draft, sent, delivered, confirmed, rejected
+    subtotal            NUMERIC(15,2) DEFAULT 0,
+    vat_amount          NUMERIC(15,2) DEFAULT 0,
+    vat_rate            NUMERIC(5,2) DEFAULT 18,
+    grand_total         NUMERIC(15,2) DEFAULT 0,
+    currency            VARCHAR(3) DEFAULT 'TZS',
+    exchange_rate       NUMERIC(10,6) DEFAULT 1,
+    notes               TEXT,
+    client_name         VARCHAR(255) NOT NULL,
+    client_address      TEXT NOT NULL,
+    client_tin          VARCHAR(50),
+    client_phone        VARCHAR(30),
+    client_email        VARCHAR(255),
+    rejection_reason    TEXT,
+    created_at          TIMESTAMP DEFAULT NOW(),
+    updated_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE document_items (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id         UUID NOT NULL REFERENCES business_documents(id) ON DELETE CASCADE,
+    description         VARCHAR(255) NOT NULL,
+    quantity            NUMERIC(10,2) NOT NULL,
+    unit                VARCHAR(50),
+    unit_price          NUMERIC(15,2) NOT NULL,
+    total               NUMERIC(15,2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE document_events (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id         UUID NOT NULL REFERENCES business_documents(id) ON DELETE CASCADE,
+    status              VARCHAR(20) NOT NULL,
+    changed_by_user_id  UUID REFERENCES users(id),
+    notes               TEXT,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 10: COMPANY CARE — DEBTORS & CREDITORS
+-- ============================================================
+
+CREATE TABLE debtor_records (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id         UUID REFERENCES customers(id) ON DELETE SET NULL,
+    debtor_name         VARCHAR(255) NOT NULL,
+    debtor_phone        VARCHAR(30),
+    debtor_email        VARCHAR(255),
+    debt_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+    item_or_service     VARCHAR(255),
+    amount_owed         NUMERIC(15,2) NOT NULL,
+    amount_paid         NUMERIC(15,2) DEFAULT 0,
+    balance_remaining   NUMERIC(15,2) GENERATED ALWAYS AS (amount_owed - amount_paid) STORED,
+    status              VARCHAR(20) DEFAULT 'unpaid',    -- unpaid, partial, paid
+    due_date            DATE,
+    notes               TEXT,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE creditor_records (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    supplier_id         UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+    creditor_name       VARCHAR(255) NOT NULL,
+    creditor_phone      VARCHAR(30),
+    creditor_email      VARCHAR(255),
+    credit_date         DATE NOT NULL DEFAULT CURRENT_DATE,
+    item_or_service     VARCHAR(255),
+    amount_owed         NUMERIC(15,2) NOT NULL,
+    amount_paid         NUMERIC(15,2) DEFAULT 0,
+    balance_remaining   NUMERIC(15,2) GENERATED ALWAYS AS (amount_owed - amount_paid) STORED,
+    status              VARCHAR(20) DEFAULT 'unpaid',    -- unpaid, partial, paid
+    due_date            DATE,
+    notes               TEXT,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE debt_payments (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    record_type         VARCHAR(10) NOT NULL,            -- debtor, creditor
+    record_id           UUID NOT NULL,                   -- FK to debtor_records or creditor_records
+    payment_date        DATE NOT NULL DEFAULT CURRENT_DATE,
+    amount_paid         NUMERIC(15,2) NOT NULL,
+    payment_method      VARCHAR(50),
+    notes               TEXT,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE care_snapshots (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    snapshot_date       DATE NOT NULL DEFAULT CURRENT_DATE,
+    period_type         VARCHAR(10) NOT NULL,            -- daily, monthly, quarterly, yearly
+    total_debtors       NUMERIC(15,2) DEFAULT 0,
+    total_creditors     NUMERIC(15,2) DEFAULT 0,
+    net_position        NUMERIC(15,2) GENERATED ALWAYS AS (total_debtors - total_creditors) STORED,
+    health_status       VARCHAR(20),                     -- healthy, watch, at_risk
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 11: STAFF & PAYROLL MANAGEMENT
+-- ============================================================
+
+CREATE TABLE employees (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    business_unit_id    UUID REFERENCES business_units(id) ON DELETE SET NULL,
+    full_name           VARCHAR(255) NOT NULL,
+    phone               VARCHAR(30),
+    email               VARCHAR(255),
+    national_id         VARCHAR(50),
+    position            VARCHAR(100),
+    department          VARCHAR(100),
+    employment_type     VARCHAR(50),                     -- permanent, contract, casual
+    employment_date      DATE NOT NULL,
+    basic_salary        NUMERIC(15,2),
+    bank_name           VARCHAR(255),
+    bank_account_number VARCHAR(50),
+    is_active           BOOLEAN DEFAULT TRUE,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE payroll_runs (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    business_unit_id    UUID REFERENCES business_units(id) ON DELETE SET NULL,
+    run_date            DATE NOT NULL DEFAULT CURRENT_DATE,
+    period_month        INTEGER NOT NULL,
+    period_year         INTEGER NOT NULL,
+    total_gross_pay     NUMERIC(15,2) DEFAULT 0,
+    total_deductions    NUMERIC(15,2) DEFAULT 0,
+    total_net_pay       NUMERIC(15,2) DEFAULT 0,
+    status              VARCHAR(20) DEFAULT 'draft',     -- draft, finalized, paid
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE payroll_items (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    payroll_run_id      UUID NOT NULL REFERENCES payroll_runs(id) ON DELETE CASCADE,
+    employee_id         UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    basic_salary        NUMERIC(15,2) NOT NULL,
+    gross_pay           NUMERIC(15,2) NOT NULL,
+    total_deductions    NUMERIC(15,2) DEFAULT 0,
+    net_pay             NUMERIC(15,2) NOT NULL,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE payroll_deductions (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    payroll_item_id     UUID NOT NULL REFERENCES payroll_items(id) ON DELETE CASCADE,
+    deduction_type      VARCHAR(50) NOT NULL,            -- nssf, paye, loan, advance, other
+    deduction_name      VARCHAR(100),
+    amount              NUMERIC(15,2) NOT NULL,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE payroll_allowances (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    payroll_item_id     UUID NOT NULL REFERENCES payroll_items(id) ON DELETE CASCADE,
+    allowance_type      VARCHAR(50) NOT NULL,            -- transport, housing, meal, other
+    allowance_name      VARCHAR(100),
+    amount              NUMERIC(15,2) NOT NULL,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 12: INVENTORY & STOCK MANAGEMENT
+-- ============================================================
+
+CREATE TABLE inventory_items (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    business_unit_id    UUID REFERENCES business_units(id) ON DELETE SET NULL,
+    item_name           VARCHAR(255) NOT NULL,
+    sku                 VARCHAR(50),
+    unit                VARCHAR(50),                     -- pieces, kg, metres, etc.
+    current_quantity    NUMERIC(10,2) DEFAULT 0,
+    reorder_level       NUMERIC(10,2) DEFAULT 0,
+    reorder_quantity    NUMERIC(10,2) DEFAULT 0,
+    preferred_supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+    unit_cost           NUMERIC(15,2),
+    unit_price          NUMERIC(15,2),
+    is_active           BOOLEAN DEFAULT TRUE,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE reorder_alerts (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    inventory_item_id   UUID NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+    alert_date          DATE NOT NULL DEFAULT CURRENT_DATE,
+    current_quantity    NUMERIC(10,2) NOT NULL,
+    reorder_level       NUMERIC(10,2) NOT NULL,
+    status              VARCHAR(20) DEFAULT 'triggered', -- triggered, ordered, resolved
+    purchase_order_id   UUID REFERENCES business_documents(id) ON DELETE SET NULL,
+    notes               TEXT,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 13: LOAN APPLICATIONS
+-- ============================================================
+
+CREATE TABLE loan_applications (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    lender_name         VARCHAR(255) NOT NULL,          -- NMB, CRDB, SIDO, Government
+    loan_type           VARCHAR(50) NOT NULL,           -- business, government, emergency
+    amount_applied      NUMERIC(15,2) NOT NULL,
+    application_date    DATE NOT NULL DEFAULT CURRENT_DATE,
+    expected_disbursement_date DATE,
+    purpose             TEXT,
+    collateral          TEXT,
+    status              VARCHAR(30) DEFAULT 'applied',  -- applied, under_review, approved, rejected, disbursed
+    follow_up_date      DATE,
+    rejection_reason    TEXT,
+    disbursement_amount NUMERIC(15,2),
+    disbursement_date   DATE,
+    converted_to_loan_id UUID REFERENCES bank_loans(id) ON DELETE SET NULL,
+    notes               TEXT,
+    created_at          TIMESTAMP DEFAULT NOW(),
+    updated_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE loan_application_events (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    application_id      UUID NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
+    status              VARCHAR(30) NOT NULL,
+    changed_by_user_id  UUID REFERENCES users(id),
+    notes               TEXT,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 14: CUSTOMER MANAGEMENT (CRM)
+-- ============================================================
+
+CREATE TABLE customers (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    full_name           VARCHAR(255) NOT NULL,
+    business_name       VARCHAR(255),
+    phone               VARCHAR(30),
+    email               VARCHAR(255),
+    physical_address     TEXT,
+    customer_type       VARCHAR(20) DEFAULT 'individual', -- individual, business
+    tin                 VARCHAR(50),
+    date_added          DATE NOT NULL DEFAULT CURRENT_DATE,
+    notes               TEXT,
+    is_active           BOOLEAN DEFAULT TRUE,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE customer_sales (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id         UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    sale_id             UUID REFERENCES sales_entries(id) ON DELETE SET NULL,
+    sale_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+    amount              NUMERIC(15,2) NOT NULL,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE customer_documents (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    customer_id         UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    document_id         UUID NOT NULL REFERENCES business_documents(id) ON DELETE CASCADE,
+    sent_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 15: MULTI-CURRENCY SUPPORT
+-- ============================================================
+
+CREATE TABLE currencies (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code                VARCHAR(3) UNIQUE NOT NULL,     -- TZS, USD, KES, EUR, GBP
+    name                VARCHAR(50) NOT NULL,
+    symbol              VARCHAR(5) NOT NULL,
+    is_active           BOOLEAN DEFAULT TRUE,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE exchange_rates (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    from_currency       VARCHAR(3) NOT NULL,             -- USD
+    to_currency         VARCHAR(3) NOT NULL,             -- TZS
+    rate                NUMERIC(10,6) NOT NULL,
+    effective_date      DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at          TIMESTAMP DEFAULT NOW(),
+    UNIQUE(from_currency, to_currency, effective_date)
+);
+
+-- ============================================================
+-- SECTION 16: EXPENSE CATEGORIES & BUDGET
+-- ============================================================
+
+CREATE TABLE expense_categories (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    name                VARCHAR(100) NOT NULL,
+    description         TEXT,
+    is_default          BOOLEAN DEFAULT FALSE,          -- Default categories
+    is_active           BOOLEAN DEFAULT TRUE,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE expense_budgets (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    category_id         UUID NOT NULL REFERENCES expense_categories(id) ON DELETE CASCADE,
+    business_unit_id    UUID REFERENCES business_units(id) ON DELETE SET NULL,
+    budget_month        INTEGER NOT NULL,
+    budget_year         INTEGER NOT NULL,
+    budget_amount       NUMERIC(15,2) NOT NULL,
+    actual_spent        NUMERIC(15,2) DEFAULT 0,
+    remaining           NUMERIC(15,2) GENERATED ALWAYS AS (budget_amount - actual_spent) STORED,
+    created_at          TIMESTAMP DEFAULT NOW(),
+    UNIQUE(company_id, category_id, business_unit_id, budget_month, budget_year)
+);
+
+-- ============================================================
+-- SECTION 17: REPORT GENERATION
+-- ============================================================
+
+CREATE TABLE report_history (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    user_id             UUID REFERENCES users(id) ON DELETE SET NULL,
+    report_type         VARCHAR(50) NOT NULL,            -- sales, purchases, expenses, pnl, payroll, etc.
+    report_format       VARCHAR(10) NOT NULL,            -- pdf, csv
+    period_type         VARCHAR(20),                     -- daily, monthly, quarterly, yearly
+    start_date          DATE,
+    end_date            DATE,
+    file_path           TEXT,
+    generated_at        TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================================
+-- SECTION 18: ANALYTICS CACHE
+-- ============================================================
+
+CREATE TABLE analytics_cache (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id          UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    cache_key           VARCHAR(100) NOT NULL,
+    cache_data          JSONB NOT NULL,
+    cache_date          DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at          TIMESTAMP DEFAULT NOW(),
+    UNIQUE(company_id, cache_key, cache_date)
 );
 
 -- ============================================================

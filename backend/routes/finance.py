@@ -11,48 +11,6 @@ import models
 router = APIRouter(tags=["Finance"])
 
 
-# ── Business Units ───────────────────────────────────────────
-
-business_router = APIRouter(prefix="/business-units", tags=["Business Units"])
-
-
-class BusinessUnitCreate(BaseModel):
-    name: str
-    type: Optional[str] = None
-
-
-@business_router.get("/")
-def list_business_units(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
-    return (
-        db.query(models.BusinessUnit)
-        .filter(
-            models.BusinessUnit.company_id == current_user.company_id,
-            models.BusinessUnit.is_active == True,
-        )
-        .order_by(models.BusinessUnit.name.asc())
-        .all()
-    )
-
-
-@business_router.post("/")
-def create_business_unit(
-    data: BusinessUnitCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
-):
-    unit = models.BusinessUnit(
-        company_id=current_user.company_id,
-        **data.model_dump(),
-    )
-    db.add(unit)
-    db.commit()
-    db.refresh(unit)
-    return unit
-
-
 # ── Schemas ──────────────────────────────────────────────────
 
 class SaleCreate(BaseModel):
